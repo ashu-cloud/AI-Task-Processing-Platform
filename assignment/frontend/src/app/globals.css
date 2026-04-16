@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --background: #020617;
+  --foreground: #e2e8f0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field span {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+}
+
+.input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.85);
+  padding: 0.9rem 1rem;
+  color: #f8fafc;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(34, 211, 238, 0.8);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+
+.button-primary,
+.button-secondary,
+.toggle-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.9rem 1.1rem;
+  font-weight: 600;
+  transition: 150ms ease;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, #06b6d4, #2563eb);
+  color: white;
+}
+
+.button-secondary {
+  background: rgba(148, 163, 184, 0.14);
+  color: #e2e8f0;
+}
+
+.toggle-button {
+  flex: 1;
+  background: transparent;
+  color: #94a3b8;
+}
+
+.toggle-button-active {
+  background: rgba(6, 182, 212, 0.2);
+  color: #ecfeff;
+}
+
+.content-box {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+}
+
+.status-running {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
+.status-success {
+  background: rgba(16, 185, 129, 0.18);
+  color: #86efac;
+}
+
+.status-failed {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
