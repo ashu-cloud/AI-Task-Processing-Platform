@@ -65,6 +65,15 @@ export default function Home() {
     }
   }, []);
 
+  const fetchTasks = useCallback(async () => {
+    try {
+      const response = await api.get<{ tasks: Task[] }>("/tasks", authHeaders);
+      setTasks(response.data.tasks);
+    } catch (error) {
+      setMessage(extractError(error, "Unable to fetch tasks."));
+    }
+  }, [authHeaders]);
+
   useEffect(() => {
     if (!token) {
       return;
@@ -77,15 +86,6 @@ export default function Home() {
 
     return () => window.clearInterval(interval);
   }, [fetchTasks, token]);
-
-  const fetchTasks = useCallback(async () => {
-    try {
-      const response = await api.get<{ tasks: Task[] }>("/tasks", authHeaders);
-      setTasks(response.data.tasks);
-    } catch (error) {
-      setMessage(extractError(error, "Unable to fetch tasks."));
-    }
-  }, [authHeaders]);
 
   async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

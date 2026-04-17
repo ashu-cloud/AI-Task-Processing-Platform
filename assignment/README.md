@@ -38,24 +38,76 @@ ai-task-platform/
 └── README.md
 ```
 
-## Local Development
+## Run the App
 
-1. Copy `.env.example` to `.env`.
-2. Start the full stack:
+### Docker Compose
+
+This is the recommended way to run the full stack because it starts MongoDB, Redis, backend, worker, and frontend together.
+
+1. Open a terminal in the `assignment/` folder. Run Compose from this folder, not from the parent directory.
+2. Create the root environment file from the example:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+If you are using Command Prompt instead of PowerShell:
+
+```bat
+copy .env.example .env
+```
+
+3. Review the important values in `.env`:
+
+- `MONGO_URI=mongodb://mongo:27017/ai-task-platform`
+- `REDIS_URL=redis://redis:6379/0`
+- `FRONTEND_URL=http://localhost:3000`
+- `NEXT_PUBLIC_API_URL=http://localhost:4000/api`
+- `JWT_SECRET=replace-with-a-long-random-secret`
+
+4. Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
-3. Open:
+Add `-d` if you want detached mode.
+
+5. Wait for the first build to finish. The initial run is slower because Docker pulls base images and installs dependencies.
+6. Open the app:
 
 - Frontend: `http://localhost:3000`
 - Backend health: `http://localhost:4000/health`
 - Worker health: `http://localhost:8001/health`
 
-## Manual Service Startup
+7. Stop the stack when you are done:
 
-### Backend
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` if you want to remove the MongoDB volume and start with a clean database next time.
+
+### Manual Development
+
+Use this if you want to run the services directly instead of Docker.
+
+Prerequisites:
+
+- Node.js 22+
+- Python 3.11+
+- MongoDB running on `localhost:27017`
+- Redis running on `localhost:6379`
+
+1. If you are not using Docker, update the root `.env` so MongoDB and Redis point to localhost:
+
+```env
+MONGO_URI=mongodb://localhost:27017/ai-task-platform
+REDIS_URL=redis://localhost:6379/0
+```
+
+2. Start MongoDB and Redis locally.
+3. Backend:
 
 ```bash
 cd backend
@@ -63,7 +115,9 @@ npm install
 npm run dev
 ```
 
-### Frontend
+The backend reads environment variables from the shell or a local `backend/.env` file. If you want to override the defaults, set `MONGO_URI`, `REDIS_URL`, `JWT_SECRET`, and `FRONTEND_URL` before starting it.
+
+4. Frontend:
 
 ```bash
 cd frontend
@@ -71,17 +125,21 @@ npm install
 npm run dev
 ```
 
-### Worker
+The frontend talks to `http://localhost:4000/api` by default. If you need a different backend URL, set `NEXT_PUBLIC_API_URL` in your shell or in `frontend/.env.local`.
+
+5. Worker:
 
 ```bash
 cd worker
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python -m app.main
 ```
 
-Make sure MongoDB and Redis are running locally if you start services outside Docker Compose.
+If you are using Command Prompt, activate the virtual environment with `.venv\Scripts\activate.bat` instead.
+
+If you run the app outside Docker, keep MongoDB and Redis running locally before starting the backend and worker.
 
 ## API Endpoints
 
@@ -96,45 +154,6 @@ Make sure MongoDB and Redis are running locally if you start services outside Do
 - `POST /api/tasks`
 - `GET /api/tasks/:taskId`
 - `GET /api/tasks/:taskId/logs`
-
-## Kubernetes Deployment
-
-Apply manifests:
-
-```bash
-kubectl apply -f k8s/platform.yaml
-```
-
-The manifest includes:
-
-- namespace
-- ConfigMap and Secret
-- deployments and services for MongoDB, Redis, backend, worker, and frontend
-- ingress
-- liveness and readiness probes
-- resource requests and limits
-
-## Argo CD
-
-The file `argocd/application.yaml` defines an Argo CD application with automated sync, prune, and self-heal enabled. In a real submission, the `k8s/` folder should live in a dedicated infrastructure repository and the `repoURL` should point to that repo.
-
-## CI/CD
-
-The GitHub Actions workflow:
-
-- installs dependencies
-- runs lint checks
-- builds the frontend
-- builds Docker images
-- pushes images on `main`
-- updates the infrastructure repository with the new image tags
-
-Required GitHub secrets:
-
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-- `INFRA_REPOSITORY`
-- `INFRA_REPOSITORY_TOKEN`
 
 ## Notes
 

@@ -4,14 +4,21 @@ import time
 from datetime import datetime, timezone
 
 from bson import ObjectId
+from dotenv import load_dotenv
 from pymongo import MongoClient
 from redis import Redis
+from redis.exceptions import RedisError
+
+
+load_dotenv()
+load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".env")))
 
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai-task-platform")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 DATABASE_NAME = os.getenv("MONGO_DB_NAME", "ai-task-platform")
 QUEUE_NAME = os.getenv("REDIS_QUEUE_NAME", "ai-task-jobs")
+RETRY_DELAY_SECONDS = int(os.getenv("WORKER_RETRY_DELAY_SECONDS", "5"))
 
 
 def utc_now():
@@ -42,26 +49,26 @@ def process_forever() -> None:
     redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
     tasks_collection = mongo_client[DATABASE_NAME]["tasks"]
 
-    print("Worker started and waiting for jobs...")
+    print(f"Worker started. Redis queue: '{QUEUE_NAME}' at {REDIS_URL}")
 
     while True:
-        _, payload = redis_client.brpop(QUEUE_NAME)
-        job = json.loads(payload)
-        task_id = ObjectId(job["taskId"])
-
-        tasks_collection.update_one(
-            {"_id": task_id},
-            {
-                "$set": {
-                    "status": "running",
-                    "startedAt": utc_now(),
-                    "updatedAt": utc_now(),
-                }
-            },
-        )
-        append_log(tasks_collection, task_id, "Worker picked up the task.")
-
         try:
+            _, payload = redis_client.brpop(QUEUE_NAME)
+            job = json.loads(payload)
+            task_id = ObjectId(job["taskId"])
+
+            tasks_collection.update_one(
+                {"_id": task_id},
+                {
+                    "$set": {
+                        "status": "running",
+                        "startedAt": utc_now(),
+                        "updatedAt": utc_now(),
+                    }
+                },
+            )
+            append_log(tasks_collection, task_id, "Worker picked up the task.")
+
             time.sleep(1)
             result = transform_text(job["operation"], job["inputText"])
             tasks_collection.update_one(
@@ -77,19 +84,28 @@ def process_forever() -> None:
                 },
             )
             append_log(tasks_collection, task_id, "Task completed successfully.")
-        except Exception as error:  # pragma: no cover - defensive worker safety
-            tasks_collection.update_one(
-                {"_id": task_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "errorMessage": str(error),
-                        "completedAt": utc_now(),
-                        "updatedAt": utc_now(),
-                    }
-                },
+        except RedisError as error:
+            print(
+                "Redis unavailable while waiting for jobs. "
+                f"Retrying in {RETRY_DELAY_SECONDS}s. Details: {error}"
             )
-            append_log(tasks_collection, task_id, f"Task failed: {error}")
+            time.sleep(RETRY_DELAY_SECONDS)
+        except Exception as error:  # pragma: no cover - defensive worker safety
+            if "task_id" in locals():
+                tasks_collection.update_one(
+                    {"_id": task_id},
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "errorMessage": str(error),
+                            "completedAt": utc_now(),
+                            "updatedAt": utc_now(),
+                        }
+                    },
+                )
+                append_log(tasks_collection, task_id, f"Task failed: {error}")
+            else:
+                print(f"Worker error before task selection: {error}")
 
 
 if __name__ == "__main__":

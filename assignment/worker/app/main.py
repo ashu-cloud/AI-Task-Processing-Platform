@@ -3,7 +3,8 @@ import threading
 
 from flask import Flask, jsonify
 
-from .processor import process_forever
+# Changed to absolute import for compatibility when running as a script
+from app.processor import process_forever
 
 
 app = Flask(__name__)
